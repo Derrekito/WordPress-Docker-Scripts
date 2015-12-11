@@ -1,0 +1,27 @@
+#!/bin/bash
+
+EPOCH=$(date +%s)		        # epoch is to be appended to container names for uniqueness
+FILE="blogcontainers"		        # file containing two container IDs
+
+DB_ID=$(cat blogdb.cid)
+WP_ID=$(cat blog.cid)
+
+DB_IMG="myblogdb"		        # MySQL database Docker image name
+WP_IMG="myblog"			        # WordPress Docker image name
+MESSAGE=$2			       	# capture message from user
+
+DB_NAME="blogdb"$EPOCH
+WP_NAME="blog"$EPOCH
+
+cd ~/myblog
+
+# commit containers
+docker commit --message=$MESSAGE $DB_ID $WP_IMG:$WP_NAME
+docker commit --message=$MESSAGE $WP_ID $DB_IMG:$DB_NAME
+
+# copy new IDs to file
+echo $(docker stop $DB_ID) > $FILE
+echo $(docker stop $WP_ID) >> $FILE
+
+rm blog.cid
+rm blogdb.cid

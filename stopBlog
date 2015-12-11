@@ -1,0 +1,29 @@
+#!/bin/bash
+
+DB_CID_FILE="blogdb.cid"
+WP_CID_FILE="blog.cid"
+
+if [ -f $DB_CID_FILE ]; then
+   DB_IMG_ID=$(cat $DB_CID_FILE)
+   echo "stopping $DB_IMG_ID"
+   MSG=$(docker stop $DB_IMG_ID)
+   if [ $MSG==$DB_IMG_ID ]; then
+       echo "success"
+   else
+       echo "something went wrong"
+   fi
+else
+   echo "$WP_IMG_ID not found"
+fi
+if [ -f $WP_CID_FILE ]; then
+   WP_IMG_ID=$(cat $WP_CID_FILE)
+   echo "stopping $WP_IMG_ID"
+   MSG=$(docker stop $WP_IMG_ID)
+   if [ $MSG==$WP_IMG_ID ]; then
+       echo "success"
+   else
+       echo "something went wrong"
+   fi
+else
+   echo "$WP_IMG_ID not found"
+fi

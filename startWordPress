@@ -1,0 +1,87 @@
+#!/bin/bash
+
+MYSQL_ROOT_PASSWORD=f4ct0ry81
+MYSQL_DATABASE=wordpress
+WORDPRESS_DB_PASSWORD=f4ct0ry81
+WP_PORT='80'
+DB_PORT='3306'
+
+EPOCH=$(date +%s)                    # append EPOCH to container names for uniqueness
+
+DB_CONTAINER_NAME="blogdb$EPOCH"
+WP_CONTAINER_NAME="blog$EPOCH"
+
+DB_IMG_NAME='mysql'		     # MySQL Docker image
+WP_IMG_NAME='wordpress'		     # WordPress Docker image
+
+cd ~/myblog
+WP_CID_FILE="blog.cid"
+DB_CID_FILE="blogdb.cid"
+DB_PATH='/var/lib/mysql'	     # standard MySQL path
+WP_PATH='/var/www/html'  	     # standard WordPress path
+LOCAL_DB_PATH="/$PWD$DB_PATH"
+LOCAL_WP_PATH="/$PWD$WP_PATH"
+WP_DB_ID="blogcontainers"
+
+
+if [ -f $PWD/$DB_CID_FILE ] && [ -f $PWD/$WP_CID_FILE ]; then
+    echo "$DB_CID_FILE and $WP_CID_FILE found"
+    DB_IMG_ID=$(cat $DB_CID_FILE)
+    WP_IMG_ID=$(cat $WP_CID_FILE)
+else
+    if [ -f $WP_DB_ID ]; then
+	echo "$DB_CID_FILE or $WP_CID_FILE not found!"
+	echo "Falling back to previous committed images"
+	WP_IMG_ID=$(sed -n '1p' $WP_DB_ID)    
+	DB_IMG_ID=$(sed -n '2p' $WP_DB_ID)
+    else
+	echo "Starting from $DB_IMG_NAME and $WP_IMG_NAME baseline state"
+	DB_IMG_ID=$DB_IMG_NAME
+	WP_IMG_ID=$WP_IMG_NAME
+    fi
+
+    echo "Starting MySQL Container"
+    DB_RUN=$(docker run \
+		    -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD \
+		    -e MYSQL_DATABASE=$MYSQL_DATABASE \
+		    -v $LOCAL_DB_PATH:$DB_PATH \
+		    --name $DB_CONTAINER_NAME \
+		    -p $DB_PORT:3306 \
+		    --cidfile $DB_CID_FILE \
+		    -d \
+		    $DB_IMG_NAME)
+
+    echo "Starting WordPress Container"
+    WP_RUN=$(docker run \
+		    -e WORDPRESS_DB_PASSWORD=$WORDPRESS_DB_PASSWORD \
+		    -p $WP_PORT:80 \
+		    --link $DB_CONTAINER_NAME:$DB_IMG_ID \
+		    -v $LOCAL_WP_PATH:$WP_PATH \
+		    --name $WP_CONTAINER_NAME \
+		    --cidfile $WP_CID_FILE \
+		    -d \
+		    $WP_IMG_NAME)
+    
+    echo $DB_RUN > $WP_DB_ID
+    echo $WP_RUN>> $WP_DB_ID
+    exit
+fi
+
+# run previous active uncomitted containers
+echo "starting $DB_IMG_ID"
+MSG=docker start $DB_IMG_ID
+if[ $DB_IMG_ID==$MSG ]; then
+    echo "success"
+else
+    echo "something went wrong"
+fi
+
+echo "starting $WP_IMG_ID"
+MSG=docker start $WP_IMG_ID
+if [ $WP_IMG_ID==$MSG ]; then
+    echo "success"
+else
+    echo "something went wrong"
+fi
+
+
